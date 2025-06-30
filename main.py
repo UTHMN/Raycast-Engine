@@ -3,8 +3,9 @@ import numpy as np
 
 from OpenGL.GL import *
 
-from Buffers.chunk import Chunk
-from Buffers.SSBO  import SSBO
+from Buffers.chunk   import Chunk
+from Buffers.texture import Texture
+from Buffers.SSBO    import SSBO
 
 from camera import Camera
 from mesh   import Mesh
@@ -50,26 +51,40 @@ def main() -> None:
     
     meshVertices = []
     meshIndices  = []
+    meshNormals  = []
+    meshUVs      = []
+    meshTextures = []
+    
     indicesOffset = 0
     for obj in meshes:
-        for x, y, z in obj.vertices:
-            meshVertices.append((x, y, z, 1))  # Add Padding
-                
-        for index in obj.indices:
-            meshIndices.append(index + indicesOffset)
+        for x, y, z in obj.vertices:  meshVertices.append((x, y, z, 0))  # Vec4 for Padding
+        for index in obj.indices:     meshIndices.append(index + indicesOffset)
+        
+        if obj.normals is not None:
+            for x, y, z in obj.normals:  meshNormals.append((x, y, z, 0))  # Vec4 for Padding
+        if obj.uvs is not None:
+            for x, y    in obj.uvs:  meshUVs.append((x, y))
+        if obj.textures is not None:
+            for texture in obj.textures:  meshTextures.append(texture)
         
         indicesOffset += len(obj.vertices)
     
     meshVertices = np.array(meshVertices, dtype=np.float32)
-    meshIndices  = np.array(meshIndices,  dtype=np.uint32)
+    meshIndices  = np.array(meshIndices,  dtype=np.uint32 )
+    meshNormals  = np.array(meshNormals,  dtype=np.float32)
+    meshUVs      = np.array(meshUVs    ,  dtype=np.float32)
 
     # Screen Buffer
-    screenChunk = Chunk(screenVertices, screenIndices, 0, 3, GL_FLOAT)
+    if len(meshTextures) == 0:  meshTextures = None
+    screenChunk = Chunk(screenVertices, screenIndices, 0, 3, GL_FLOAT, meshTextures)
     screenChunk.sendData()
+    screenChunk.bindTextureData(shader.program, GL_TEXTURE0)
     
     # Upload Mesh Data
-    vertSSBO  = SSBO.sendData(meshVertices, 0)
-    indexSSBO = SSBO.sendData(meshIndices,  1)
+    ssboVert   = SSBO.sendData(meshVertices, 0)
+    ssboIndex  = SSBO.sendData(meshIndices,  1)
+    ssboNormal = SSBO.sendData(meshNormals,  2)
+    ssboUV     = SSBO.sendData(meshUVs,      3)
 
     # Constant Uniforms
     glUseProgram(shader.program)
@@ -122,10 +137,13 @@ def main() -> None:
             
         lastTime = time
 
+    screenChunk.unbindTextureData()
     screenChunk.delete()
     
-    vertSSBO.delete()
-    indexSSBO.delete()
+    ssboVert.delete()
+    ssboIndex.delete()
+    ssboNormal.delete()
+    ssboUV.delete()
     
     glDeleteProgram(shader.program)
 

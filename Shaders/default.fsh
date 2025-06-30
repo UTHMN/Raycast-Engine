@@ -3,6 +3,7 @@
 #include "common.glsl"
 
 layout(std430, binding = 0) buffer VertexBuffer { vec3 vertices[]; };
+layout(std430, binding = 1) buffer UVBuffer     { vec2 UVs[];      };
 layout(std430, binding = 1) buffer IndexBuffer  { uint indices[];  };
 
 uniform vec3 CAM_POS;
@@ -52,7 +53,7 @@ void main()
         float dist = RayIntersectsTriangle(CAM_POS, rayDirection, v0, v1, v2);
         if (dist > 0.0 && dist < closestDist) {
             closestDist = dist;
-            hitNormal = normalize(cross(v1 - v0, v2 - v0)); // <-- capture normal
+            hitNormal = normalize(cross(v1 - v0, v2 - v0));
         }
     }
 

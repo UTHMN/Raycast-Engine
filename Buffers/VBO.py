@@ -1,8 +1,6 @@
 import numpy as np
 from OpenGL.GL import *
 
-from typing import Iterable
-
 class VBO:
     def __init__(self) -> None:  self.ID = glGenBuffers(1)
 
